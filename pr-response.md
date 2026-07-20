@@ -69,5 +69,46 @@ Midway through, an accidental `git pull` merged my already-pushed remote branch 
 Ran `python -m pytest tests/ -v` after the fix — all 5 tests passed, including the watchlist test against the corrected UUID type. Ran `git log --oneline --graph` to confirm the final branch history is a single linear sequence on top of main, with no merge commits introduced by my own branch.
 
 ## PR Description
-<!-- Written at the end — feature overview, design decisions, manual testing steps -->
+
+This PR adds a watchlist feature to CineLog, letting users save films they want to watch later, distinct from their collection of already-watched films.
+
+**What it does:**
+- `POST /watchlist/<user_id>/add` — adds a film to a user's watchlist (rejects nonexistent films and duplicates)
+- `GET /watchlist/<user_id>` — returns a user's watchlist, sorted by most recently added
+
+**Design decisions:**
+- **Default visibility (`public=True`):** New watchlist entries default to public, optimizing for CineLog's social/discovery use case — visibility can still be set to private per-entry. See `pr-response.md`, Comment 4, for full reasoning and the tradeoff considered.
+- **Sort order (date-added, descending):** The watchlist returns newest-added films first, matching the collection service's existing sort behavior and reflecting that a watchlist represents current viewing intent rather than a static reference list. See `pr-response.md`, Comment 5, for full reasoning.
+
+**Manual testing:**
+**Manual testing:**
+1. `python -m venv .venv && source .venv/bin/activate`
+2. `pip install -r requirements.txt`
+3. `python app.py` (starts on `http://127.0.0.1:5000`)
+4. In a separate terminal, create a test user and film:
+python
+from app import create_app, db
+from models import User, Film
+app = create_app()
+with app.app_context():
+... user = User(username="testuser", email="[test@example.com](mailto:test@example.com)")
+... film = Film(title="Paddington 2", year=2017, genre="Comedy")
+... db.session.add_all([user, film])
+... db.session.commit()
+... print("user_id:", user.id)
+... print("film_id:", film.id)
+exit()
+
+5. Using the `user_id` and `film_id` printed above, add a film to the watchlist:
+curl -X POST http://127.0.0.1:5000/watchlist/<user_id>/add
+-H "Content-Type: application/json"
+-d '{"film_id": "<film_id>"}'
+
+6. View the user's watchlist:
+curl http://127.0.0.1:5000/watchlist/<user_id>
+
+7. Confirm the response includes `public: true` (default visibility) and the entry appears with a `date_added` timestamp.
+8. Run the automated test suite: `python -m pytest tests/ -v`
+
+
 ![alt text](image.png)
