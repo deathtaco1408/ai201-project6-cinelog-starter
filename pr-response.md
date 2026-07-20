@@ -70,3 +70,4 @@ Ran `python -m pytest tests/ -v` after the fix — all 5 tests passed, including
 
 ## PR Description
 <!-- Written at the end — feature overview, design decisions, manual testing steps -->
+![alt text](image.png)
